@@ -16,6 +16,15 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 async function run() {
     try {
+        const productsCollection = client.db('sellPhone').collection('products');
+        const usersCollection = client.db('sellPhone').collection('users');
+
+        app.get('/products', async (req, res) => {
+            const query = {};
+            const cursor = productsCollection.find(query);
+            const product = await cursor.toArray();
+            res.send(product);
+        });
 
     }
     finally {
@@ -31,3 +40,6 @@ app.get('/', async (req, res) => {
 app.listen(port, () => {
     console.log(`My Server running on Server : ${port}`)
 })
+
+
+//https://resale-market-server-mu.vercel.app
