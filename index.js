@@ -15,6 +15,23 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 
+function verifyJWT(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send('unauthorized access');
+    }
+    const token = authHeader.split(' ')[1];
+
+    jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+        if (err) {
+            return res.status(403).send({ message: 'forbidden access' });
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
+
+
 async function run() {
     try {
         const productsCollection = client.db('sellPhone').collection('products');
@@ -36,9 +53,10 @@ async function run() {
         });
 
 
-        app.get('/orders', async (req, res) => {
+        app.get('/orders', verifyJWT, async (req, res) => {
             const email = req.query.email;
             const decodedEmail = req.decoded.email;
+            // console.log('token = ', req.headers.authorization);
 
             if (email !== decodedEmail) {
                 return res.status(403).send({ message: 'forbidden access' });
@@ -51,16 +69,9 @@ async function run() {
 
         app.post('/orders', async (req, res) => {
             const order = req.body;
-            console.log(order);
+            // console.log(order);
             const result = await ordersCollection.insertOne(order);
             res.send(result,)
-        });
-
-
-        app.post('/users', async (req, res) => {
-            const user = req.body;
-            const result = await usersCollection.insertOne(user);
-            res.send(result);
         });
 
         app.get('/jwt', async (req, res) => {
@@ -69,10 +80,19 @@ async function run() {
             const user = await usersCollection.findOne(query);
             if (user) {
                 const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '10hr' });
-                return res.send({ accessToken: 'token' })
+                return res.send({ accessToken: token })
             }
             res.status(403).send({ accessToken: 'Empty Token' })
         })
+
+
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const result = await usersCollection.insertOne(user);
+            res.send(result);
+        });
+
+
 
     }
     finally {
