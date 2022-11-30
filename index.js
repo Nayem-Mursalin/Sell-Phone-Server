@@ -1,7 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5500;
 require('dotenv').config();
 
@@ -18,6 +19,7 @@ async function run() {
     try {
         const productsCollection = client.db('sellPhone').collection('products');
         const usersCollection = client.db('sellPhone').collection('users');
+        const ordersCollection = client.db('sellPhone').collection('orders');
 
         app.get('/products', async (req, res) => {
             const query = {};
@@ -25,6 +27,52 @@ async function run() {
             const product = await cursor.toArray();
             res.send(product);
         });
+
+        app.get('/products/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const product = await productsCollection.findOne(query);
+            res.send(product);
+        });
+
+
+        app.get('/orders', async (req, res) => {
+            const email = req.query.email;
+            const decodedEmail = req.decoded.email;
+
+            if (email !== decodedEmail) {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+
+            const query = { email: email };
+            const orders = await ordersCollection.find(query).toArray();
+            res.send(orders);
+        });
+
+        app.post('/orders', async (req, res) => {
+            const order = req.body;
+            console.log(order);
+            const result = await ordersCollection.insertOne(order);
+            res.send(result,)
+        });
+
+
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const result = await usersCollection.insertOne(user);
+            res.send(result);
+        });
+
+        app.get('/jwt', async (req, res) => {
+            const email = req.query.email;
+            const query = { email: email }
+            const user = await usersCollection.findOne(query);
+            if (user) {
+                const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, { expiresIn: '10hr' });
+                return res.send({ accessToken: 'token' })
+            }
+            res.status(403).send({ accessToken: 'Empty Token' })
+        })
 
     }
     finally {
@@ -42,4 +90,5 @@ app.listen(port, () => {
 })
 
 
-//https://resale-market-server-mu.vercel.app
+// https://resale-market-server-mu.vercel.app
+// https://sell-phone-eb036.web.app/
