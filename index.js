@@ -85,6 +85,13 @@ async function run() {
             res.send(orders);
         });
 
+        app.get('/orders/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const booking = await ordersCollection.findOne(query);
+            res.send(booking);
+        })
+
         app.post('/orders', async (req, res) => {
             const order = req.body;
             // console.log(order);
@@ -135,6 +142,23 @@ async function run() {
             res.send(result);
         });
 
+        app.post('/create-payment-intent', async (req, res) => {
+            const booking = req.body;
+            const price = booking.price;
+            const amount = price * 100;
+
+            const paymentIntent = await stripe.paymentIntents.create({
+                currency: 'usd',
+                amount: amount,
+                "payment_method_types": [
+                    "card"
+                ]
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+        });
+
 
 
     }
@@ -153,5 +177,5 @@ app.listen(port, () => {
 })
 
 
-// https://resale-market-server-mu.vercel.app
+// https://resale-market-server-nayem-mursalin.vercel.app/
 // https://sell-phone-eb036.web.app/
