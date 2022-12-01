@@ -38,11 +38,29 @@ async function run() {
         const usersCollection = client.db('sellPhone').collection('users');
         const ordersCollection = client.db('sellPhone').collection('orders');
 
+        const verifyAdmin = async (req, res, next) => {
+            console.log('inside verifyAdmin: ', req.decoded.email);
+            const decodedEmail = req.decoded.email;
+            const query = { email: decodedEmail };
+            const user = await usersCollection.findOne(query);
+
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ message: 'forbidden access' });
+            }
+            next();
+        }
+
         app.get('/products', async (req, res) => {
             const query = {};
             const cursor = productsCollection.find(query);
             const product = await cursor.toArray();
             res.send(product);
+        });
+
+        app.post('/products', async (req, res) => {
+            const user = req.body;
+            const result = await productsCollection.insertOne(user);
+            res.send(result);
         });
 
         app.get('/products/:id', async (req, res) => {
